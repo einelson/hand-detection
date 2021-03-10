@@ -135,6 +135,7 @@ def capture():
 
     # split to get filename as int and +1
     _, tail = os.path.split(path)
+    print(tail)
     next_image = int(os.path.splitext(tail)[0]) + 1
 
     print(next_image)
@@ -145,22 +146,22 @@ def capture():
     while(True):
         # Capture frame-by-frame
         ret, frame = cap.read()
+        if not ret:
+            print("failed to grab frame")
+            break
 
         # Display the resulting frame
         cv2.imshow('frame', frame)
 
-        # wait for 'c' comand to capture the image
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            # show the captured image
-            cv2.imshow('image',frame)
-            cv2.waitKey(0)
-
+        # wait for ' ' comand to capture the image
+        if cv2.waitKey(1) %256 == 32:
             # save and increase image number
-            cv2.imwrite(str(next_image) + '.png', frame)
-            next_image += next_image
+            cv2.imwrite('train data\\x\\' + str(next_image) + '.png', frame)
+            print("{}.png written!".format(next_image))
+            next_image += 1
 
-        # Wait for 'q' to quit the program
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+        # Wait for 'esc' to quit the program
+        elif cv2.waitKey(1) %256 == 27:
             break
 
     # When everything done, release the capture
