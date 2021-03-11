@@ -28,13 +28,13 @@ import tensorflow as tf
 
 def run_video():
     # open our saved network model
-    model = tf.keras.models.load_model(os.getcwd() + '\\saved models\\')
+    model = tf.keras.models.load_model(os.getcwd() + '/saved models/model.h5')
     
     # create image for channel
     cap = cv2.VideoCapture(0)
     ret, frame = cap.read()
     rows, cols, depth = frame.shape
-    channel = np.zeros((1, rows, cols, depth))
+    channel = np.zeros((rows, cols, depth))
     print(channel)
 
     # create output frame
@@ -65,7 +65,7 @@ def run_video():
         out = np.concatenate(frame, image)
 
         # Display the resulting frame
-        cv2.imshow('frame', output)
+        cv2.imshow('frame', out)
 
         # wait for ' ' comand to
         if cv2.waitKey(1) %256 == 32:
