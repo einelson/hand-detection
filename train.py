@@ -13,9 +13,13 @@ TODO:
         Train algorithm
 
 '''
+import logging
+from tqdm import tqdm
+
+# image handling
 import os
 import glob
-# image handling
+import json
 from cv2 import cv2
 import numpy as np
 
@@ -26,15 +30,18 @@ from tensorflow import keras
 from tensorflow.keras.layers import Conv2D, InputLayer, UpSampling2D, MaxPooling2D, Dense, Flatten
 from tensorflow.keras.models import Sequential
 
+# set up logging
+logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.NOTSET)
+
 
 '''
 load_images
 loads images as array and saves them in an array
 '''
-def load_image_files(subpath='', capture=True):
+def load_images(subpath='', capture=True):
     # check for subpath
     if subpath == '':
-        print("error in opening folder")
+        logging.error("ERROR opening folder")
         return
 
     # open images and save them in array
@@ -44,16 +51,32 @@ def load_image_files(subpath='', capture=True):
     # if we are capturing return the list return the last file
     if capture == True:
         try:
+            # issue with returning last file in path due to file name
             return files[-1]
         except:
+            logging.warning('No files found. Starting from 0')
             return '0.png'
 
-    files.sort()
-    for frame in files:
+    files.sort(key=len)
+    logging.info('Loading images')
+    for frame in tqdm(files):
         images.append(cv2.imread(frame))
     # convert list to array
     return np.stack(images)
 
+'''
+load_json
+loads json file to get annotation points
+'''
+def load_json(subpath=''):
+    # load file
+    f = open(subpath,)
+
+    # save json as dict
+    data = json.load(f)
+
+    f.close()
+    return data
 
 '''
 train
@@ -61,54 +84,69 @@ Opens images and trains the neural network
 '''
 def train():
     # open images
-    x = load_image_files(subpath='train data\\x', capture=False)
-    y = load_image_files(subpath='train data\\y', capture=False)
+    x = load_images(subpath='train data\\images', capture=False)
+    annotations = load_json(subpath='train data\\annotations.json')
+    # set up list to hold all answer values (4 coordinates and 1 classification)
+    y = []
+
+    # show all images with corresponding annotations
+    for i in range(0, x.shape[0]):
+        annotation = annotations[str(i+1)+'.png']['instances'][0]['points']
+        # logging.debug(int(annotation['x1']))
+        points = [int(annotation['x1']), int(annotation['y1']), int(annotation['x2']), int(annotation['y2'])]
+        # append information in list
+        y.append(points)
+
+    y=np.stack(y)
 
     # convert from integers to floats
-    x_norm = x.astype('float32')
-    y_norm = y.astype('float32')
+    x = x.astype('float32')
+    y = y.astype('float32')
     # normalize to range 0-1
-    x = x_norm / 255.0
-    y = y_norm / 255.0
+    x = x / 255.0
+    y = y / 255.0
 
-    print('train shape: ',x.shape)
-    print('test shape: ',y.shape)
+    logging.debug('train shape: {}'.format(x.shape))
+    logging.debug('test shape: {}'.format(y.shape))
 
     # split between test and training data
     X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size=0.33, random_state=42)
     
     # create model
-    inputs=keras.Input(shape=(32, 32, 3))
+    inputs=keras.Input(shape=(480, 640, 3))
 
     # block 1 -- input regular image
     x=keras.layers.Conv2D(32, (3, 3), activation='relu', padding='same')(inputs)
     x=keras.layers.MaxPooling2D(2, 2)(x)
     x=keras.layers.Conv2D(32, (3, 3), activation='relu', padding='same')(x)
     x=keras.layers.MaxPooling2D(2, 2)(x)
-    block_1_outputs=keras.layers.Flatten()(x)
-
-    # block 2 -- input image with edge detection ran on it
-    x=keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same')(inputs) #run edge detection here
-    x=keras.layers.MaxPooling2D(2, 2)(x)
-    x=keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same')(x)
-    x=keras.layers.MaxPooling2D(2, 2)(x)
-    block_2_outputs=keras.layers.Flatten()(x)
-
-    # block 3 -- grey scale image
-    x=keras.layers.Conv2D(32, (3, 3), activation='relu', padding='same')(inputs) #convert to greyscale  here
-    x=keras.layers.MaxPooling2D(2, 2)(x)    
     x=keras.layers.Conv2D(32, (3, 3), activation='relu', padding='same')(x)
     x=keras.layers.MaxPooling2D(2, 2)(x)
-    block_3_outputs=keras.layers.Flatten()(x)
+    x=keras.layers.Flatten()(x)
+
+    # # block 2 -- input image with edge detection ran on it
+    # x=keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same')(inputs) #run edge detection here
+    # x=keras.layers.MaxPooling2D(2, 2)(x)
+    # x=keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same')(x)
+    # x=keras.layers.MaxPooling2D(2, 2)(x)
+    # block_2_outputs=keras.layers.Flatten()(x)
+
+    # # block 3 -- grey scale image
+    # x=keras.layers.Conv2D(32, (3, 3), activation='relu', padding='same')(inputs) #convert to greyscale  here
+    # x=keras.layers.MaxPooling2D(2, 2)(x)    
+    # x=keras.layers.Conv2D(32, (3, 3), activation='relu', padding='same')(x)
+    # x=keras.layers.MaxPooling2D(2, 2)(x)
+    # block_3_outputs=keras.layers.Flatten()(x)
 
     # output -- concat blocks and add 2d layers
-    x=keras.layers.concatenate([block_1_outputs, block_2_outputs, block_3_outputs])
+    # x=keras.layers.concatenate([block_1_outputs, block_2_outputs, block_3_outputs])
     x=keras.layers.Dense(256)(x)
-    X=keras.layers.Dense(256)(x)
-    outputs=keras.layers.Dense(26, activation='softmax')(x) # 0=NA, 1=a, 26=z
+    x=keras.layers.Dense(128)(x)
+    x=keras.layers.Dense(64)(x)
+    outputs=keras.layers.Dense(4)(x) # 0=NA, 1=a, 26=z
     # end model
 
-    # plot model
+    # # plot model
     model=keras.Model(inputs=inputs, outputs=outputs, name="cifar_10_model")
     keras.utils.plot_model(model, "./saved models/model.png", show_shapes=True)
 
@@ -116,13 +154,42 @@ def train():
     model.summary()
 
     # compile model and fit with training data
-    model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-    model.fit(x=X_train, y=Y_train,epochs=10,batch_size=256, validation_data=(X_test,Y_test))
+    model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
+    model.fit(x=X_train, y=Y_train,epochs=15,batch_size=2, validation_data=(X_test,Y_test))
+    # save model
+    print(os.getcwd()+'/saved models/model.h5')
+    model.save(os.getcwd()+'/saved models/model.h5') 
 
     # model accuracy
     score, acc = model.evaluate(x=X_test, y=Y_test)
+    acc = 100*(acc)
+    if acc > 90:
+        logging.info('Accuracy: {}%'.format(acc))
+    elif acc < 89:
+        logging.warning('Accuracy is very low: {}%'.format(acc))
+    elif acc < 10:
+        logging.error('Accuracy is very low. Retraining is necessary to have a working model: {}%'.format(acc))
 
-    print('Accuracy: ',100*(acc))
+    # predict one image
+    # first is channel (image number)
+    test_image= X_test[3:4, :, :, :]    
+    # logging.debug(test_image.shape)
+    # cv2.imshow('test image', test_image[0])
+    # cv2.waitKey(0)
+
+    # put rectangle acording to predicted points
+    points = model.predict(test_image)[0] * 255
+    # logging.debug(points[0])
+    image = test_image[0, :, :, :]
+    # logging.debug(image.shape)
+    # cv2.imshow('test image', image)
+    # cv2.waitKey(0)
+
+    # add rectangle to image and show predicted
+    image = cv2.rectangle(image, (points[0], points[1]), (points[2], points[3]), (0, 255, 0), 5)
+    # logging.debug(image.shape)
+    cv2.imshow('test image', image)
+    cv2.waitKey(0)
 
 '''
 caputre
@@ -131,14 +198,14 @@ will give the images a filename that is sequential
 '''
 def capture():
     # get next file number to work with
-    path = load_image_files(subpath='train data\\x', capture=True)
+    path = load_images(subpath='train data\\images', capture=True)
 
     # split to get filename as int and +1
     _, tail = os.path.split(path)
-    print(tail)
+    # logging.debug(tail)
     next_image = int(os.path.splitext(tail)[0]) + 1
 
-    print(next_image)
+    logging.debug('Next image: {}'.format(next_image))
     
 
     """ Live capture your laptop camera """
@@ -147,7 +214,7 @@ def capture():
         # Capture frame-by-frame
         ret, frame = cap.read()
         if not ret:
-            print("failed to grab frame")
+            logging.error("Failed to open feed. Returning to menu")
             break
 
         # Display the resulting frame
@@ -156,8 +223,8 @@ def capture():
         # wait for ' ' comand to capture the image
         if cv2.waitKey(1) %256 == 32:
             # save and increase image number
-            cv2.imwrite('train data\\x\\' + str(next_image) + '.png', frame)
-            print("{}.png written!".format(next_image))
+            cv2.imwrite('train data\\images\\' + str(next_image) + '.png', frame)
+            logging.info("{}.png written".format(next_image))
             next_image += 1
 
         # Wait for 'esc' to quit the program

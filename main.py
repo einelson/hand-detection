@@ -17,13 +17,70 @@ TODO:
         https://wiki.python.org/moin/UdpCommunication
 
 '''
-
-import numpy as np
+import os
 import socket
-import tensorflow as tf
+import logging
+# image handling
+import numpy as np
 from cv2 import cv2
+import tensorflow as tf
 
 
+def run_video():
+    # open our saved network model
+    model = tf.keras.models.load_model(os.getcwd() + '\\saved models\\')
+    
+    # create image for channel
+    cap = cv2.VideoCapture(0)
+    ret, frame = cap.read()
+    rows, cols, depth = frame.shape
+    channel = np.zeros((1, rows, cols, depth))
+    print(channel)
+
+    # create output frame
+    output = np.zeros((rows, cols * 2, depth))
+    print(output)
+
+    """ Live capture your laptop camera """
+    while(True):
+        # Capture frame-by-frame
+        ret, frame = cap.read()
+        if not ret:
+            logging.error("Failed to open feed. Returning to menu")
+            break
+
+        frame = np.stack(channel, frame)
+        # preprocess
+        frame = frame.astype('float32')
+        frame = frame / 255.0
+
+        # get current frame and put through model prediction
+        points = model.predict(frame)[0] * 255
+        frame = frame[0, :, :, :]
+
+        # add annotation to resulting image
+        image = cv2.rectangle(frame, (points[0], points[1]), (points[2], points[3]), (0, 255, 0), 5)
+
+        # concat images together to see result
+        out = np.concatenate(frame, image)
+
+        # Display the resulting frame
+        cv2.imshow('frame', output)
+
+        # wait for ' ' comand to
+        if cv2.waitKey(1) %256 == 32:
+            pass
+
+        # Wait for 'esc' to quit the program
+        elif cv2.waitKey(1) %256 == 27:
+            break
+
+    # When everything done, release the capture
+    cap.release()
+    cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    pass
+    # run server
+
+    # run video feed
+    run_video()
