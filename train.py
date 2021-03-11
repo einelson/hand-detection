@@ -48,6 +48,7 @@ def load_images(subpath='', capture=True):
     images = []
     path = os.getcwd() + '\\' + subpath
     files = [f for f in glob.glob(path + "\\*.png", recursive=False)]
+    files.sort(key=len)
     # if we are capturing return the list return the last file
     if capture == True:
         try:
@@ -57,7 +58,6 @@ def load_images(subpath='', capture=True):
             logging.warning('No files found. Starting from 0')
             return '0.png'
 
-    files.sort(key=len)
     logging.info('Loading images')
     for frame in tqdm(files):
         images.append(cv2.imread(frame))
@@ -98,7 +98,7 @@ def train():
         y.append(points)
 
     y=np.stack(y)
-
+    xt = x[0]
     # convert from integers to floats
     x = x.astype('float32')
     y = y.astype('float32')
@@ -110,7 +110,7 @@ def train():
     logging.debug('test shape: {}'.format(y.shape))
 
     # split between test and training data
-    X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size=0.33, random_state=42)
+    X_train, X_test, Y_train, Y_test = train_test_split(xa, y, test_size=0.33, random_state=42)
     
     # create model
     inputs=keras.Input(shape=(480, 640, 3))
@@ -172,13 +172,13 @@ def train():
 
     # predict one image
     # first is channel (image number)
-    test_image= X_test[3:4, :, :, :]    
+    test_image= np.stack[xt, xt]  
     # logging.debug(test_image.shape)
     # cv2.imshow('test image', test_image[0])
     # cv2.waitKey(0)
 
     # put rectangle acording to predicted points
-    points = model.predict(test_image)[0] * 255
+    points = model.predict(test_image)[0] * 255.0
     # logging.debug(points[0])
     image = test_image[0, :, :, :]
     # logging.debug(image.shape)

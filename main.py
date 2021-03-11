@@ -34,12 +34,11 @@ def run_video():
     cap = cv2.VideoCapture(0)
     ret, frame = cap.read()
     rows, cols, depth = frame.shape
-    channel = np.zeros((rows, cols, depth))
-    print(channel)
+    # print(frame.shape)
 
     # create output frame
     output = np.zeros((rows, cols * 2, depth))
-    print(output)
+    # print(output.shape)
 
     """ Live capture your laptop camera """
     while(True):
@@ -49,7 +48,8 @@ def run_video():
             logging.error("Failed to open feed. Returning to menu")
             break
 
-        frame = np.stack(channel, frame)
+        orig_frame = frame
+        frame = np.stack([frame, frame])
         # preprocess
         frame = frame.astype('float32')
         frame = frame / 255.0
@@ -59,13 +59,14 @@ def run_video():
         frame = frame[0, :, :, :]
 
         # add annotation to resulting image
-        image = cv2.rectangle(frame, (points[0], points[1]), (points[2], points[3]), (0, 255, 0), 5)
+        frame = cv2.rectangle(frame, (points[0], points[1]), (points[2], points[3]), (0, 255, 0), 5)
 
         # concat images together to see result
-        out = np.concatenate(frame, image)
+        out = np.concatenate([frame, orig_frame], axis=1)
 
-        # Display the resulting frame
-        cv2.imshow('frame', out)
+        # Display the resulting frame an issue with concating the frames. The original frame
+        # is not displaying correctly
+        cv2.imshow('frame', frame)
 
         # wait for ' ' comand to
         if cv2.waitKey(1) %256 == 32:
