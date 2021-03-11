@@ -55,7 +55,7 @@ def run_video():
         frame = frame / 255.0
 
         # get current frame and put through model prediction
-        points = model.predict(frame)[0] #* 255
+        points = model.predict(frame)[0] * 255
         frame = frame[0, :, :, :]
 
         # add annotation to resulting image
