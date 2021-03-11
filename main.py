@@ -55,14 +55,14 @@ def run_video():
         frame = frame / 255.0
 
         # get current frame and put through model prediction
-        points = model.predict(frame)[0] * 255
+        points = model.predict(frame)[0] #* 255
         frame = frame[0, :, :, :]
 
         # add annotation to resulting image
         frame = cv2.rectangle(frame, (points[0], points[1]), (points[2], points[3]), (0, 255, 0), 5)
 
         # concat images together to see result
-        out = np.concatenate([frame, orig_frame], axis=1)
+        output = np.concatenate([frame, orig_frame], axis=1)
 
         # Display the resulting frame an issue with concating the frames. The original frame
         # is not displaying correctly

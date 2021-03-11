@@ -97,9 +97,13 @@ def train():
         # append information in list
         y.append(points)
 
+    # stack all outputs into array
     y=np.stack(y)
-    xt = x[0]
-    # convert from integers to floats
+
+    # testing image
+    xt = x[3].astype('float32') / 255
+
+    # Preprocess-- convert from integers to floats
     x = x.astype('float32')
     y = y.astype('float32')
     # normalize to range 0-1
@@ -110,24 +114,26 @@ def train():
     logging.debug('test shape: {}'.format(y.shape))
 
     # split between test and training data
-    X_train, X_test, Y_train, Y_test = train_test_split(xa, y, test_size=0.33, random_state=42)
+    X_train, X_test, Y_train, Y_test = train_test_split(x, y, test_size=0.15)
     
     # create model
     inputs=keras.Input(shape=(480, 640, 3))
 
     # block 1 -- input regular image
-    x=keras.layers.Conv2D(32, (3, 3), activation='relu', padding='same')(inputs)
+    x=keras.layers.Conv2D(8, (3, 3), activation='relu', padding='same', strides=2)(inputs)
+    x=keras.layers.Conv2D(8, (3, 3), activation='relu', padding='same')(x)
+    x=keras.layers.MaxPooling2D(2, 2)(x)
+    x=keras.layers.Conv2D(16, (3, 3), activation='relu', padding='same', strides=2)(x)
+    x=keras.layers.Conv2D(16, (3, 3), activation='relu', padding='same')(x)
     x=keras.layers.MaxPooling2D(2, 2)(x)
     x=keras.layers.Conv2D(32, (3, 3), activation='relu', padding='same')(x)
     x=keras.layers.MaxPooling2D(2, 2)(x)
-    x=keras.layers.Conv2D(32, (3, 3), activation='relu', padding='same')(x)
+    x=keras.layers.Conv2D(16, (3, 3), activation='relu', padding='same')(x)
     x=keras.layers.MaxPooling2D(2, 2)(x)
     x=keras.layers.Flatten()(x)
 
-    # # block 2 -- input image with edge detection ran on it
-    # x=keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same')(inputs) #run edge detection here
-    # x=keras.layers.MaxPooling2D(2, 2)(x)
-    # x=keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same')(x)
+    # block 2 -- input image with edge detection ran on it
+    # x=keras.layers.Conv2D(128, (3, 3), activation='relu', padding='same')(x)
     # x=keras.layers.MaxPooling2D(2, 2)(x)
     # block_2_outputs=keras.layers.Flatten()(x)
 
@@ -139,7 +145,7 @@ def train():
     # block_3_outputs=keras.layers.Flatten()(x)
 
     # output -- concat blocks and add 2d layers
-    # x=keras.layers.concatenate([block_1_outputs, block_2_outputs, block_3_outputs])
+    # x=keras.layers.concatenate([block_1_outputs, block_2_outputs])
     x=keras.layers.Dense(256)(x)
     x=keras.layers.Dense(128)(x)
     x=keras.layers.Dense(64)(x)
@@ -147,7 +153,7 @@ def train():
     # end model
 
     # # plot model
-    model=keras.Model(inputs=inputs, outputs=outputs, name="cifar_10_model")
+    model=keras.Model(inputs=inputs, outputs=outputs, name="head")
     keras.utils.plot_model(model, "./saved models/model.png", show_shapes=True)
 
     # model summary
@@ -155,13 +161,13 @@ def train():
 
     # compile model and fit with training data
     model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
-    model.fit(x=X_train, y=Y_train,epochs=15,batch_size=2, validation_data=(X_test,Y_test))
+    model.fit(x=X_train, y=Y_train,epochs=15,batch_size=1, validation_data=(X_test,Y_test))
     # save model
     print(os.getcwd()+'/saved models/model.h5')
     model.save(os.getcwd()+'/saved models/model.h5') 
 
     # model accuracy
-    score, acc = model.evaluate(x=X_test, y=Y_test)
+    _, acc = model.evaluate(x=X_test, y=Y_test)
     acc = 100*(acc)
     if acc > 90:
         logging.info('Accuracy: {}%'.format(acc))
@@ -172,8 +178,8 @@ def train():
 
     # predict one image
     # first is channel (image number)
-    test_image= np.stack[xt, xt]  
-    # logging.debug(test_image.shape)
+    test_image= np.stack([xt, xt])  
+    logging.debug(test_image.shape)
     # cv2.imshow('test image', test_image[0])
     # cv2.waitKey(0)
 
