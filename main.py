@@ -37,7 +37,7 @@ def run_video():
     # print(frame.shape)
 
     # create output frame
-    output = np.zeros((rows, cols * 2, depth))
+    # output = np.zeros((rows, cols * 2, depth))
     # print(output.shape)
 
     """ Live capture your laptop camera """
@@ -56,10 +56,10 @@ def run_video():
 
         # get current frame and put through model prediction
         points = model.predict(frame)[0] * 255
-        frame = frame[0, :, :, :]
+        # frame = frame[0, :, :, :]
 
         # add annotation to resulting image
-        frame = cv2.rectangle(frame, (points[0], points[1]), (points[2], points[3]), (0, 255, 0), 5)
+        frame = cv2.rectangle(orig_frame, (points[0], points[1]), (points[2], points[3]), (0, 255, 0), 5)
 
         # concat images together to see result
         output = np.concatenate([frame, orig_frame], axis=1)
