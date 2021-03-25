@@ -13,52 +13,44 @@ TODO:
     close feed when done with client connection
 
 '''
-import socket, pickle, struct
+import socket, base64
+import logging
 from cv2 import cv2
+import numpy as np
+
+# set up logging
+logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.NOTSET)
+# buffer var
+BUFF_SIZE = 65536
 
 def show_video():
-    # create socket
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # set up server
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, BUFF_SIZE)
+    # host_name = socket.gethostname()
+    # host_ip = socket.gethostbyname(host_name)
     host_ip = 'localhost'
+    logging.debug('Host IP: {}%'.format(host_ip))
     port = 9999
-    client_socket.connect((host_ip, port))
-    data = b''
-    payload_size = struct.calcsize('Q')
 
-    # receive data
+    client_socket.sendto(b'connected', (host_ip, port))
     while True:
-        while len(data) < payload_size:
-            packet = client_socket.recv(4*1024)
-            # if no stream break
-            if not packet:
-                break
-            # add packets together
-            data += packet
+        packet, _ = client_socket.recvfrom(BUFF_SIZE)
+        data = base64.b64decode(packet, ' /')
+        npdata = np.fromstring(data, dtype = np.uint8)
 
-        # unpack the video
-        packed_msg_size = data[:payload_size]
-        data = data[payload_size:]
-        msg_size = struct.unpack('Q', packed_msg_size)[0]
-
-        while len(data) < msg_size:
-            data =+ client_socket.recv(4*1024)
+        frame = cv2.imdecode(npdata, 1)
         
-        # get frame data
-        frame_data = data[:msg_size]
-        data = data[msg_size:]
-        frame = pickle.loads(frame_data)
-
         # show video
         cv2.imshow('received video', frame)
-        
+
         # Wait for 'esc' to quit the program
         if cv2.waitKey(1) %256 == 27:
             break
     
     # release video
     cv2.destroyAllWindows()
-    # close server
-    client_socket.close()
+
 
 if __name__ == "__main__":
     show_video()
