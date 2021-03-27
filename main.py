@@ -19,8 +19,7 @@ TODO:
 '''
 import os
 import logging
-# sending video
-import socket, imutils, base64
+
 # image handling
 import numpy as np
 from cv2 import cv2
@@ -30,17 +29,6 @@ BUFF_SIZE = 65536
 
 
 def run_video():
-    # set up server
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, BUFF_SIZE)
-    # host_name = socket.gethostname()
-    # host_ip = socket.gethostbyname(host_name)
-    host_ip = 'localhost'
-    logging.debug('Host IP: {}%'.format(host_ip))
-    port = 9999
-    socket_address = (host_ip, port)
-    server_socket.bind(socket_address)
-
     # open our saved network model
     model = tf.keras.models.load_model(os.getcwd() + '/saved models/model.h5')
     
@@ -51,9 +39,6 @@ def run_video():
 
     """ Live capture your laptop camera """
     while(True):
-        # connected client
-        msg, client_addr = server_socket.recvfrom(BUFF_SIZE)
-
         # Capture frame-by-frame
         ret, orig_frame = cap.read()
         if not ret:
@@ -73,14 +58,7 @@ def run_video():
         # add annotation to resulting image
         frame = cv2.rectangle(orig_frame, (points[0], points[1]), (points[2], points[3]), (0, 255, 0), 5)
 
-        # Display the resulting frame an issue with concating the frames
-        # this is what we want to send to our server
-        frame = imutils.resize(frame, width = 400)
-        encoded, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY,80])
-        message = base64.b64encode(buffer)
-        server_socket.sendto(message, client_addr)
-
-        cv2.imshow('Transmitting video', frame)
+        cv2.imshow('Computer vision', frame)
 
         # Wait for 'esc' to quit the program
         if cv2.waitKey(1) %256 == 27:
