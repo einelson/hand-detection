@@ -89,8 +89,8 @@ def train():
     # set up list to hold all answer values (4 coordinates and 1 classification)
     y = []
 
-    # show 10 images with corresponding annotations
-    for i in range(0, 10): #x.shape[0] for all
+    # save annotated points into list
+    for i in range(0, x.shape[0]): 
         annotation = annotations[str(i+1)+'.png']['instances'][0]['points']
         # logging.debug(int(annotation['x1']))
         points = [int(annotation['x1']), int(annotation['y1']), int(annotation['x2']), int(annotation['y2'])]
@@ -161,7 +161,7 @@ def train():
 
     # compile model and fit with training data
     model.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
-    model.fit(x=X_train, y=Y_train,epochs=15,batch_size=1, validation_data=(X_test,Y_test))
+    model.fit(x=X_train, y=Y_train,epochs=150,batch_size=4, validation_data=(X_test,Y_test))
     # save model
     print(os.getcwd()+'/saved models/model.h5')
     model.save(os.getcwd()+'/saved models/model.h5') 
