@@ -89,8 +89,8 @@ def train():
     # set up list to hold all answer values (4 coordinates and 1 classification)
     y = []
 
-    # show all images with corresponding annotations
-    for i in range(0, x.shape[0]):
+    # show 10 images with corresponding annotations
+    for i in range(0, 10): #x.shape[0] for all
         annotation = annotations[str(i+1)+'.png']['instances'][0]['points']
         # logging.debug(int(annotation['x1']))
         points = [int(annotation['x1']), int(annotation['y1']), int(annotation['x2']), int(annotation['y2'])]
